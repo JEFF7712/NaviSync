@@ -1,7 +1,6 @@
 package sync
 
 import (
-	"encoding/json"
 	"fmt"
 	"github.com/extism/go-pdk"
 	"github.com/JEFF7712/NaviSync/spotify"
@@ -43,7 +42,7 @@ func PerformSync() error {
 		// Refresh token if needed
 		client := spotify.NewClient(token)
 		newToken, err := client.RefreshToken()
-		if err == nil && newToken != nil {
+		if err == nil && newToken != "" {
 			// Update token in KVStore
 			if err := navidrome.SetUserToken(user.ID, newToken); err != nil {
 				pdk.Log(pdk.LogError, fmt.Sprintf("Failed to save refreshed token for user %s: %v", user.Username, err))
