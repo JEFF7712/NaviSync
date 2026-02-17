@@ -51,8 +51,7 @@
         "spotify_refresh_token": {
           "title": "Spotify Refresh Token",
           "description": "Manual Refresh Token (temporary until OAuth UI is ready)",
-          "type": "string",
-          "format": "password"
+          "type": "string"
         },
         "spotify_redirect_uri": {
           "title": "Spotify Redirect URI",
@@ -83,7 +82,52 @@
           "default": false
         }
       },
-      "required": ["spotify_client_id", "spotify_client_secret"]
+    "uiSchema": {
+      "type": "VerticalLayout",
+      "elements": [
+        {
+          "type": "Control",
+          "scope": "#/properties/sync_interval"
+        },
+        {
+          "type": "Control",
+          "scope": "#/properties/spotify_client_id"
+        },
+        {
+          "type": "Control",
+          "scope": "#/properties/spotify_client_secret",
+          "options": {
+            "format": "password"
+          }
+        },
+        {
+          "type": "Control",
+          "scope": "#/properties/spotify_refresh_token",
+          "options": {
+            "format": "password"
+          }
+        },
+        {
+          "type": "Control",
+          "scope": "#/properties/spotify_redirect_uri"
+        },
+        {
+          "type": "Control",
+          "scope": "#/properties/playlists_filter"
+        },
+        {
+          "type": "Control",
+          "scope": "#/properties/remove_deleted_tracks"
+        },
+        {
+          "type": "Control",
+          "scope": "#/properties/test_connection"
+        },
+        {
+          "type": "Control",
+          "scope": "#/properties/manual_sync"
+        }
+      ]
     }
   },
   "interfaces": {
