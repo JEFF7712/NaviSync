@@ -23,97 +23,53 @@ type Track struct {
 	ISRC   string `json:"isrc"`
 }
 
-// Result wrapper for host calls
-type hostResult struct {
-	Exists bool            `json:"exists"`
-	Value  json.RawMessage `json:"value"`
-}
+// --- KVStore (Mock) ---
 
-// --- KVStore ---
-
-// GetUserToken retrieves the Spotify OAuth token from KVStore.
+// GetUserToken retrieves the Spotify OAuth token.
 func GetUserToken(userID string) (string, error) {
-	// First check config for manual override
+	// Priority: Global Config (spotify_refresh_token)
 	token, _ := pdk.GetConfig("spotify_refresh_token")
 	if token != "" {
 		return token, nil
 	}
 
-	// Try Host KVStore
-	key := "spotify_token:" + userID
-	res, err := pdk.HostFunction("kvstore", "get", []byte(key))
-	if err != nil {
-		return "", fmt.Errorf("kvstore error: %w", err)
-	}
-
-	var result hostResult
-	if err := json.Unmarshal(res, &result); err != nil {
-		return "", err
-	}
-
-	if !result.Exists {
-		return "", fmt.Errorf("no token found for user %s", userID)
-	}
-
-	return string(result.Value), nil
+	return "", fmt.Errorf("no refresh token found for user %s. Please enter it in the plugin settings.", userID)
 }
 
 // SetUserToken saves the Spotify OAuth token.
 func SetUserToken(userID string, token string) error {
-	key := "spotify_token:" + userID
-	_, err := pdk.HostFunction("kvstore", "set", []byte(fmt.Sprintf(`{"key":"%s","value":"%s"}`, key, token)))
-	return err
+	pdk.Log(pdk.LogDebug, "Mock: SetUserToken not yet linked to real host DB")
+	return nil
 }
 
-// --- Scheduler ---
+// --- Scheduler (Mock) ---
 
-// Schedule registers a callback to be called at the specified interval.
+// Schedule registers a callback.
 func Schedule(cron string, callback string) error {
-	payload := fmt.Sprintf(`{"cron":"%s","callback":"%s"}`, cron, callback)
-	_, err := pdk.HostFunction("scheduler", "schedule_recurring", []byte(payload))
-	return err
+	pdk.Log(pdk.LogInfo, "Mock: Scheduled "+callback+" at "+cron)
+	return nil
 }
 
-// --- Users ---
+// --- Users (Mock) ---
 
-// GetUsers returns all users in Navidrome.
+// GetUsers returns all users.
 func GetUsers() ([]User, error) {
-	res, err := pdk.HostFunction("navidrome", "get_users", nil)
-	if err != nil {
-		return nil, err
-	}
-
-	var users []User
-	if err := json.Unmarshal(res, &users); err != nil {
-		return nil, err
-	}
-	return users, nil
+	// For now, only return the admin user as a placeholder.
+	// Real implementation requires verifying the exact WasmImport name for Navidrome's user service.
+	return []User{{ID: "admin", Username: "admin"}}, nil
 }
 
-// --- Subsonic / Library ---
+// --- Subsonic / Library (Mock) ---
 
-// FindTrack attempts to find a track in Navidrome by ISRC or fuzzy match.
+// FindTrack attempts to find a track in Navidrome.
 func FindTrack(isrc, artist, title string) (*Track, error) {
-	query := fmt.Sprintf(`{"isrc":"%s","artist":"%s","title":"%s"}`, isrc, artist, title)
-	res, err := pdk.HostFunction("subsonic", "find_track", []byte(query))
-	if err != nil {
-		return nil, err
-	}
-
-	var track Track
-	if err := json.Unmarshal(res, &track); err != nil {
-		if string(res) == "null" {
-			return nil, nil
-		}
-		return nil, err
-	}
-	return &track, nil
+	// This is a placeholder. Real integration will call Navidrome's search.
+	pdk.Log(pdk.LogDebug, fmt.Sprintf("Mock: Searching for %s - %s", artist, title))
+	return nil, nil // Return nil so it doesn't try to add non-existent tracks
 }
 
 // UpdatePlaylist creates or updates a playlist for a user.
 func UpdatePlaylist(userID, name string, trackIDs []string) error {
-	tracksJSON, _ := json.Marshal(trackIDs)
-	payload := fmt.Sprintf(`{"userId":"%s","name":"%s","trackIds":%s}`, userID, name, string(tracksJSON))
-	_, err := pdk.HostFunction("subsonic", "update_playlist", []byte(payload))
-	return err
+	pdk.Log(pdk.LogInfo, fmt.Sprintf("Mock: Syncing playlist %s for user %s (%d tracks matched)", name, userID, len(trackIDs)))
+	return nil
 }
