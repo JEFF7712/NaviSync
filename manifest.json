@@ -4,52 +4,68 @@
   "description": "Periodically syncs Spotify playlists to Navidrome.",
   "author": "Rupan (JEFF7712)",
   "license": "MIT",
-  "permissions": [
-    "lifecycle",
-    "scheduler",
-    "kvstore",
-    "subsonicapi",
-    "users"
-  ],
-  "http": {
-    "allowed_hosts": [
-      "api.spotify.com",
-      "accounts.spotify.com"
-    ]
+  "permissions": {
+    "lifecycle": {
+      "reason": "To start and stop the sync process"
+    },
+    "scheduler": {
+      "reason": "To schedule periodic syncs"
+    },
+    "kvstore": {
+      "reason": "To store Spotify tokens"
+    },
+    "subsonicapi": {
+      "reason": "To manage playlists"
+    },
+    "users": {
+      "reason": "To read user preferences"
+    },
+    "http": {
+      "reason": "To communicate with Spotify API",
+      "requiredHosts": [
+        "api.spotify.com",
+        "accounts.spotify.com"
+      ]
+    }
   },
   "config": {
-    "sync_interval": {
-      "title": "Sync Interval",
-      "description": "Cron expression for sync schedule (default: every 6 hours)",
-      "type": "string",
-      "default": "0 */6 * * *"
-    },
-    "spotify_client_id": {
-      "title": "Spotify Client ID",
-      "description": "Spotify App Client ID",
-      "type": "string"
-    },
-    "spotify_client_secret": {
-      "title": "Spotify Client Secret",
-      "description": "Spotify App Client Secret",
-      "type": "string",
-      "format": "password"
-    },
-    "spotify_redirect_uri": {
-      "title": "Spotify Redirect URI",
-      "description": "OAuth callback URL (e.g., https://your-navidrome.com/auth/spotify/callback)",
-      "type": "string"
-    },
-    "playlists_filter": {
-      "title": "Playlists Filter",
-      "description": "Comma-separated list of playlist names to sync (leave empty for all)",
-      "type": "string"
-    },
-    "remove_deleted_tracks": {
-      "title": "Remove Deleted Tracks",
-      "description": "Remove tracks from Navidrome playlist if they are removed from Spotify",
-      "type": "boolean",
-      "default": false
+    "schema": {
+      "type": "object",
+      "properties": {
+        "sync_interval": {
+          "title": "Sync Interval",
+          "description": "Cron expression for sync schedule (default: every 6 hours)",
+          "type": "string",
+          "default": "0 */6 * * *"
+        },
+        "spotify_client_id": {
+          "title": "Spotify Client ID",
+          "description": "Spotify App Client ID",
+          "type": "string"
+        },
+        "spotify_client_secret": {
+          "title": "Spotify Client Secret",
+          "description": "Spotify App Client Secret",
+          "type": "string"
+        },
+        "spotify_redirect_uri": {
+          "title": "Spotify Redirect URI",
+          "description": "OAuth callback URL",
+          "type": "string"
+        },
+        "playlists_filter": {
+          "title": "Playlists Filter",
+          "description": "Comma-separated list of playlist names to sync",
+          "type": "string"
+        },
+        "remove_deleted_tracks": {
+          "title": "Remove Deleted Tracks",
+          "description": "Remove tracks from Navidrome playlist if they are removed from Spotify",
+          "type": "boolean",
+          "default": false
+        }
+      },
+      "required": ["spotify_client_id", "spotify_client_secret"]
     }
   },
   "interfaces": {
