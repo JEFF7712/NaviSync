@@ -60,7 +60,7 @@ type PlaylistTracksResponse struct {
 // GetPlaylists fetches the current user's playlists.
 func (c *Client) GetPlaylists() ([]Playlist, error) {
 	// TODO: Handle pagination
-	req := pdk.NewHTTPRequest(pdk.MethodGet, "https://api.spotify.com/v1/me/playlists")
+	req := pdk.NewHTTPRequest("GET", "https://api.spotify.com/v1/me/playlists")
 	req.SetHeader("Authorization", "Bearer "+c.Token)
 	
 	res := req.Send()
@@ -80,7 +80,7 @@ func (c *Client) GetPlaylists() ([]Playlist, error) {
 func (c *Client) GetPlaylistTracks(playlistID string) ([]Track, error) {
 	// TODO: Handle pagination
 	url := fmt.Sprintf("https://api.spotify.com/v1/playlists/%s/tracks", playlistID)
-	req := pdk.NewHTTPRequest(pdk.MethodGet, url)
+	req := pdk.NewHTTPRequest("GET", url)
 	req.SetHeader("Authorization", "Bearer "+c.Token)
 	
 	res := req.Send()
