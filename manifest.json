@@ -48,6 +48,12 @@
           "description": "Spotify App Client Secret",
           "type": "string"
         },
+        "spotify_refresh_token": {
+          "title": "Spotify Refresh Token",
+          "description": "Manual Refresh Token (temporary until OAuth UI is ready)",
+          "type": "string",
+          "format": "password"
+        },
         "spotify_redirect_uri": {
           "title": "Spotify Redirect URI",
           "description": "OAuth callback URL",

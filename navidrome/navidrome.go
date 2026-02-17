@@ -25,36 +25,29 @@ type Track struct {
 
 // --- KVStore ---
 
-// GetUserToken retrieves the Spotify OAuth token for a user from the KVStore.
+// GetUserToken retrieves the Spotify OAuth token.
+// Priority:
+// 1. KVStore (not fully implemented yet, skipping)
+// 2. Global Config (spotify_refresh_token)
 func GetUserToken(userID string) (string, error) {
-	// Key format: "spotify_token:<userID>"
-	_ = "spotify_token:" + userID
+	// 1. Try Config (Simplest for single-user/admin setup)
+	token, _ := pdk.GetConfig("spotify_refresh_token")
+	if token != "" {
+		return token, nil
+	}
+
+	// 2. Try KVStore (Placeholder implementation)
+	// In the future, we will fetch this from the host.
+	// For now, we rely on the config.
 	
-	// Assuming `kvstore_get` is the host function
-	// In Extism Go PDK, host functions are called via `HostFunction`
-	// But usually, there are wrapper libraries.
-	// Since I don't have the library, I'll simulate it or use generic host calls.
-	
-	// Implementation placeholder:
-	// val, err := pdk.GetInput() ...
-	// Since I cannot implement exact host calls without the definition,
-	// I will write the logic assuming a helper function exists.
-	
-	// For now, let's assume `pdk.GetVar` might work for KVStore if mapped,
-	// but `kvstore` is likely a specific host module.
-	
-	// Using generic HostFunction call:
-	// res, err := pdk.HostFunction("kvstore", "get", []byte(key))
-	// if err != nil { return "", err }
-	// return string(res), nil
-	
-	return "", errors.New("KVStore not implemented (missing host function definitions)")
+	return "", fmt.Errorf("no refresh token found in config 'spotify_refresh_token'")
 }
 
-// SetUserToken saves the Spotify OAuth token for a user.
+// SetUserToken saves the Spotify OAuth token.
 func SetUserToken(userID string, token string) error {
-	_ = "spotify_token:" + userID
-	// Implementation placeholder
+	// Placeholder: We can't update the config from here.
+	// Real implementation would use KVStore.
+	pdk.Log(pdk.LogDebug, "Mock: Saving new token for user "+userID)
 	return nil
 }
 
