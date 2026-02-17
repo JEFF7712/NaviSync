@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/extism/go-pdk"
-	"time"
 )
 
 type Client struct {
