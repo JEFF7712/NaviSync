@@ -25,9 +25,18 @@ func CheckTriggers() {
 	testConn, _ := pdk.GetConfig("test_connection")
 	if testConn == "true" {
 		pdk.Log(pdk.LogInfo, "TEST: Testing Spotify connection...")
-		// Placeholder: In real flow, we'd need a token first.
-		// For now, just logging that we received the signal.
-		pdk.Log(pdk.LogInfo, "TEST: Spotify connection test finished (Mock).")
+		
+		token, _ := pdk.GetConfig("spotify_refresh_token")
+		clientID, _ := pdk.GetConfig("spotify_client_id")
+		clientSecret, _ := pdk.GetConfig("spotify_client_secret")
+
+		client := spotify.NewClient(token, clientID, clientSecret)
+		accessToken, err := client.RefreshToken()
+		if err != nil {
+			pdk.Log(pdk.LogError, "TEST: Connection test failed: "+err.Error())
+		} else if accessToken != "" {
+			pdk.Log(pdk.LogInfo, "TEST: Connection successful! Obtained Access Token.")
+		}
 	}
 
 	manualSync, _ := pdk.GetConfig("manual_sync")
@@ -60,15 +69,15 @@ func PerformSync() error {
 			continue
 		}
 
+		clientID, _ := pdk.GetConfig("spotify_client_id")
+		clientSecret, _ := pdk.GetConfig("spotify_client_secret")
+
 		// Refresh token if needed
-		client := spotify.NewClient(token)
-		newToken, err := client.RefreshToken()
-		if err == nil && newToken != "" {
-			// Update token in KVStore
-			if err := navidrome.SetUserToken(user.ID, newToken); err != nil {
-				pdk.Log(pdk.LogError, fmt.Sprintf("Failed to save refreshed token for user %s: %v", user.Username, err))
-			}
-			client.SetToken(newToken)
+		client := spotify.NewClient(token, clientID, clientSecret)
+		accessToken, err := client.RefreshToken()
+		if err == nil && accessToken != "" {
+			pdk.Log(pdk.LogInfo, fmt.Sprintf("Successfully refreshed token for user %s", user.Username))
+			client.SetToken(accessToken)
 		} else if err != nil {
 			pdk.Log(pdk.LogError, fmt.Sprintf("Failed to refresh token for user %s: %v", user.Username, err))
 			continue

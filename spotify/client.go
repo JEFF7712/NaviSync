@@ -1,17 +1,24 @@
 package spotify
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"github.com/extism/go-pdk"
 )
 
 type Client struct {
-	Token string
+	Token        string
+	ClientID     string
+	ClientSecret string
 }
 
-func NewClient(token string) *Client {
-	return &Client{Token: token}
+func NewClient(token, clientID, clientSecret string) *Client {
+	return &Client{
+		Token:        token,
+		ClientID:     clientID,
+		ClientSecret: clientSecret,
+	}
 }
 
 func (c *Client) SetToken(token string) {
@@ -57,15 +64,20 @@ type PlaylistTracksResponse struct {
 	Next string `json:"next"`
 }
 
+type TokenResponse struct {
+	AccessToken string `json:"access_token"`
+	TokenType   string `json:"token_type"`
+	ExpiresIn   int    `json:"expires_in"`
+}
+
 // GetPlaylists fetches the current user's playlists.
 func (c *Client) GetPlaylists() ([]Playlist, error) {
-	// TODO: Handle pagination
 	req := pdk.NewHTTPRequest("GET", "https://api.spotify.com/v1/me/playlists")
 	req.SetHeader("Authorization", "Bearer "+c.Token)
 	
 	res := req.Send()
 	if res.Status() != 200 {
-		return nil, fmt.Errorf("failed to get playlists: status %d", res.Status())
+		return nil, fmt.Errorf("failed to get playlists: status %d. Body: %s", res.Status(), string(res.Body()))
 	}
 	
 	var response PlaylistsResponse
@@ -78,7 +90,6 @@ func (c *Client) GetPlaylists() ([]Playlist, error) {
 
 // GetPlaylistTracks fetches tracks from a playlist.
 func (c *Client) GetPlaylistTracks(playlistID string) ([]Track, error) {
-	// TODO: Handle pagination
 	url := fmt.Sprintf("https://api.spotify.com/v1/playlists/%s/tracks", playlistID)
 	req := pdk.NewHTTPRequest("GET", url)
 	req.SetHeader("Authorization", "Bearer "+c.Token)
@@ -110,10 +121,31 @@ func (c *Client) GetPlaylistTracks(playlistID string) ([]Track, error) {
 	return tracks, nil
 }
 
-// RefreshToken refreshes the access token using the refresh token (not implemented fully).
+// RefreshToken refreshes the access token using the refresh token.
 func (c *Client) RefreshToken() (string, error) {
-	// This requires client_id/secret and a POST request to accounts.spotify.com
-	// For now, we assume the token is valid or refreshed externally.
-	// Implementing OAuth flow inside WASM is tricky without host support for secure storage/secrets.
-	return c.Token, nil
+	if c.ClientID == "" || c.ClientSecret == "" {
+		return "", fmt.Errorf("spotify_client_id or spotify_client_secret not configured")
+	}
+
+	url := "https://accounts.spotify.com/api/token"
+	req := pdk.NewHTTPRequest("POST", url)
+	
+	auth := base64.StdEncoding.EncodeToString([]byte(c.ClientID + ":" + c.ClientSecret))
+	req.SetHeader("Authorization", "Basic "+auth)
+	req.SetHeader("Content-Type", "application/x-www-form-urlencoded")
+	
+	body := fmt.Sprintf("grant_type=refresh_token&refresh_token=%s", c.Token)
+	req.SetBody([]byte(body))
+	
+	res := req.Send()
+	if res.Status() != 200 {
+		return "", fmt.Errorf("failed to refresh token: status %d. Body: %s", res.Status(), string(res.Body()))
+	}
+	
+	var response TokenResponse
+	if err := json.Unmarshal(res.Body(), &response); err != nil {
+		return "", err
+	}
+	
+	return response.AccessToken, nil
 }
