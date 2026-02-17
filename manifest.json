@@ -17,47 +17,41 @@
       "accounts.spotify.com"
     ]
   },
-  "config": [
-    {
-      "name": "sync_interval",
+  "config": {
+    "sync_interval": {
       "title": "Sync Interval",
       "description": "Cron expression for sync schedule (default: every 6 hours)",
       "type": "string",
       "default": "0 */6 * * *"
     },
-    {
-      "name": "spotify_client_id",
+    "spotify_client_id": {
       "title": "Spotify Client ID",
       "description": "Spotify App Client ID",
       "type": "string"
     },
-    {
-      "name": "spotify_client_secret",
+    "spotify_client_secret": {
       "title": "Spotify Client Secret",
       "description": "Spotify App Client Secret",
       "type": "string",
-      "secret": true
+      "format": "password"
     },
-    {
-      "name": "spotify_redirect_uri",
+    "spotify_redirect_uri": {
       "title": "Spotify Redirect URI",
       "description": "OAuth callback URL (e.g., https://your-navidrome.com/auth/spotify/callback)",
       "type": "string"
     },
-    {
-      "name": "playlists_filter",
+    "playlists_filter": {
       "title": "Playlists Filter",
       "description": "Comma-separated list of playlist names to sync (leave empty for all)",
       "type": "string"
     },
-    {
-      "name": "remove_deleted_tracks",
+    "remove_deleted_tracks": {
       "title": "Remove Deleted Tracks",
       "description": "Remove tracks from Navidrome playlist if they are removed from Spotify",
       "type": "boolean",
       "default": false
     }
-  ],
+  },
   "interfaces": {
     "wasi": "0.1"
   }
