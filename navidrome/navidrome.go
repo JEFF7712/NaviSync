@@ -1,7 +1,6 @@
 package navidrome
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/extism/go-pdk"
