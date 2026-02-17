@@ -1,6 +1,7 @@
 package navidrome
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/extism/go-pdk"
@@ -22,68 +23,97 @@ type Track struct {
 	ISRC   string `json:"isrc"`
 }
 
+// Result wrapper for host calls
+type hostResult struct {
+	Exists bool            `json:"exists"`
+	Value  json.RawMessage `json:"value"`
+}
+
 // --- KVStore ---
 
-// GetUserToken retrieves the Spotify OAuth token.
-// Priority:
-// 1. KVStore (not fully implemented yet, skipping)
-// 2. Global Config (spotify_refresh_token)
+// GetUserToken retrieves the Spotify OAuth token from KVStore.
 func GetUserToken(userID string) (string, error) {
-	// 1. Try Config (Simplest for single-user/admin setup)
+	// First check config for manual override
 	token, _ := pdk.GetConfig("spotify_refresh_token")
 	if token != "" {
 		return token, nil
 	}
 
-	// 2. Try KVStore (Placeholder implementation)
-	// In the future, we will fetch this from the host.
-	// For now, we rely on the config.
-	
-	return "", fmt.Errorf("no refresh token found in config 'spotify_refresh_token'")
+	// Try Host KVStore
+	key := "spotify_token:" + userID
+	res, err := pdk.HostFunction("kvstore", "get", []byte(key))
+	if err != nil {
+		return "", fmt.Errorf("kvstore error: %w", err)
+	}
+
+	var result hostResult
+	if err := json.Unmarshal(res, &result); err != nil {
+		return "", err
+	}
+
+	if !result.Exists {
+		return "", fmt.Errorf("no token found for user %s", userID)
+	}
+
+	return string(result.Value), nil
 }
 
 // SetUserToken saves the Spotify OAuth token.
 func SetUserToken(userID string, token string) error {
-	// Placeholder: We can't update the config from here.
-	// Real implementation would use KVStore.
-	pdk.Log(pdk.LogDebug, "Mock: Saving new token for user "+userID)
-	return nil
+	key := "spotify_token:" + userID
+	_, err := pdk.HostFunction("kvstore", "set", []byte(fmt.Sprintf(`{"key":"%s","value":"%s"}`, key, token)))
+	return err
 }
 
 // --- Scheduler ---
 
 // Schedule registers a callback to be called at the specified interval.
 func Schedule(cron string, callback string) error {
-	// Placeholder for scheduler host function
-	pdk.Log(pdk.LogInfo, "Scheduling " + callback + " at " + cron)
-	return nil
+	payload := fmt.Sprintf(`{"cron":"%s","callback":"%s"}`, cron, callback)
+	_, err := pdk.HostFunction("scheduler", "schedule_recurring", []byte(payload))
+	return err
 }
 
 // --- Users ---
 
 // GetUsers returns all users in Navidrome.
 func GetUsers() ([]User, error) {
-	// Placeholder for users host function
-	// In a real plugin, we'd call `navidrome_get_users`
-	return []User{{ID: "admin", Username: "admin"}}, nil
+	res, err := pdk.HostFunction("navidrome", "get_users", nil)
+	if err != nil {
+		return nil, err
+	}
+
+	var users []User
+	if err := json.Unmarshal(res, &users); err != nil {
+		return nil, err
+	}
+	return users, nil
 }
 
 // --- Subsonic / Library ---
 
 // FindTrack attempts to find a track in Navidrome by ISRC or fuzzy match.
 func FindTrack(isrc, artist, title string) (*Track, error) {
-	// Placeholder
-	// 1. Search by ISRC if available
-	// 2. Search by "artist title"
-	return &Track{ID: "123", Title: title, Artist: artist}, nil
+	query := fmt.Sprintf(`{"isrc":"%s","artist":"%s","title":"%s"}`, isrc, artist, title)
+	res, err := pdk.HostFunction("subsonic", "find_track", []byte(query))
+	if err != nil {
+		return nil, err
+	}
+
+	var track Track
+	if err := json.Unmarshal(res, &track); err != nil {
+		if string(res) == "null" {
+			return nil, nil
+		}
+		return nil, err
+	}
+	return &track, nil
 }
 
 // UpdatePlaylist creates or updates a playlist for a user.
 func UpdatePlaylist(userID, name string, trackIDs []string) error {
-	// Placeholder
-	// 1. Check if playlist exists
-	// 2. If not, create it
-	// 3. Update tracks
-	pdk.Log(pdk.LogInfo, fmt.Sprintf("Updated playlist %s for user %s with %d tracks", name, userID, len(trackIDs)))
-	return nil
+	tracksJSON, _ := json.Marshal(trackIDs)
+	payload := fmt.Sprintf(`{"userId":"%s","name":"%s","trackIds":%s}`, userID, name, string(tracksJSON))
+	_, err := pdk.HostFunction("subsonic", "update_playlist", []byte(payload))
+	return err
 }

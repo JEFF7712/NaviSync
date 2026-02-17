@@ -2,6 +2,7 @@ package sync
 
 import (
 	"fmt"
+	"strings"
 	"github.com/extism/go-pdk"
 	"github.com/JEFF7712/NaviSync/spotify"
 	"github.com/JEFF7712/NaviSync/navidrome"
@@ -53,7 +54,7 @@ func CheckTriggers() {
 // PerformSync is the main logic called by the scheduler.
 // It iterates through all users (or configured users) and syncs their playlists.
 func PerformSync() error {
-	pdk.Log(pdk.LogInfo, "Starting scheduled Spotify sync...")
+	pdk.Log(pdk.LogInfo, "Starting Spotify sync process...")
 
 	// Fetch all users from Navidrome
 	users, err := navidrome.GetUsers()
@@ -61,25 +62,25 @@ func PerformSync() error {
 		return fmt.Errorf("failed to get users: %w", err)
 	}
 
+	clientID, _ := pdk.GetConfig("spotify_client_id")
+	clientSecret, _ := pdk.GetConfig("spotify_client_secret")
+
 	for _, user := range users {
-		// Check if user has Spotify credentials stored in KVStore
+		// Check if user has Spotify credentials
 		token, err := navidrome.GetUserToken(user.ID)
 		if err != nil {
-			pdk.Log(pdk.LogWarn, fmt.Sprintf("Skipping user %s: no token found or error: %v", user.Username, err))
+			pdk.Log(pdk.LogWarn, fmt.Sprintf("Skipping user %s: no token found: %v", user.Username, err))
 			continue
 		}
-
-		clientID, _ := pdk.GetConfig("spotify_client_id")
-		clientSecret, _ := pdk.GetConfig("spotify_client_secret")
 
 		// Refresh token if needed
 		client := spotify.NewClient(token, clientID, clientSecret)
 		accessToken, err := client.RefreshToken()
 		if err == nil && accessToken != "" {
-			pdk.Log(pdk.LogInfo, fmt.Sprintf("Successfully refreshed token for user %s", user.Username))
+			pdk.Log(pdk.LogInfo, fmt.Sprintf("Successfully authenticated Spotify for user %s", user.Username))
 			client.SetToken(accessToken)
 		} else if err != nil {
-			pdk.Log(pdk.LogError, fmt.Sprintf("Failed to refresh token for user %s: %v", user.Username, err))
+			pdk.Log(pdk.LogError, fmt.Sprintf("Failed to authenticate user %s: %v", user.Username, err))
 			continue
 		}
 
@@ -89,7 +90,7 @@ func PerformSync() error {
 		}
 	}
 
-	pdk.Log(pdk.LogInfo, "Spotify sync completed.")
+	pdk.Log(pdk.LogInfo, "Spotify sync process completed.")
 	return nil
 }
 
@@ -102,8 +103,9 @@ func syncUserPlaylists(client *spotify.Client, user navidrome.User) error {
 	filterStr, _ := pdk.GetConfig("playlists_filter")
 	filter := make(map[string]bool)
 	if filterStr != "" {
-		// Parse comma-separated filter
-		// ... (omitted for brevity, assume simple split)
+		for _, f := range strings.Split(filterStr, ",") {
+			filter[strings.TrimSpace(f)] = true
+		}
 	}
 
 	for _, pl := range playlists {
@@ -111,7 +113,7 @@ func syncUserPlaylists(client *spotify.Client, user navidrome.User) error {
 			continue
 		}
 
-		pdk.Log(pdk.LogDebug, fmt.Sprintf("Syncing playlist: %s", pl.Name))
+		pdk.Log(pdk.LogInfo, fmt.Sprintf("Syncing playlist [%s] for user %s", pl.Name, user.Username))
 		
 		tracks, err := client.GetPlaylistTracks(pl.ID)
 		if err != nil {
@@ -126,7 +128,7 @@ func syncUserPlaylists(client *spotify.Client, user navidrome.User) error {
 			if err == nil && ndTrack != nil {
 				navidromeTrackIDs = append(navidromeTrackIDs, ndTrack.ID)
 			} else {
-				pdk.Log(pdk.LogWarn, fmt.Sprintf("Unmatched track: %s - %s (ISRC: %s)", track.Artist, track.Title, track.ISRC))
+				pdk.Log(pdk.LogDebug, fmt.Sprintf("Unmatched track: %s - %s (ISRC: %s)", track.Artist, track.Title, track.ISRC))
 			}
 		}
 
@@ -134,6 +136,8 @@ func syncUserPlaylists(client *spotify.Client, user navidrome.User) error {
 		if len(navidromeTrackIDs) > 0 {
 			if err := navidrome.UpdatePlaylist(user.ID, pl.Name, navidromeTrackIDs); err != nil {
 				pdk.Log(pdk.LogError, fmt.Sprintf("Failed to update playlist %s: %v", pl.Name, err))
+			} else {
+				pdk.Log(pdk.LogInfo, fmt.Sprintf("Successfully synced %d tracks to Navidrome playlist [%s]", len(navidromeTrackIDs), pl.Name))
 			}
 		}
 	}
