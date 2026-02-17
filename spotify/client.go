@@ -82,9 +82,7 @@ func (c *Client) GetPlaylists() ([]Playlist, error) {
 		
 		res := req.Send()
 		if res.Status() == 429 {
-			pdk.Log(pdk.LogWarn, "Spotify Rate Limit (429) hit. Waiting...")
-			time.Sleep(5 * time.Second) // Simple backoff
-			continue
+			return nil, fmt.Errorf("Spotify Rate Limit (429) hit. Please wait a few minutes before trying again.")
 		}
 		if res.Status() != 200 {
 			return nil, fmt.Errorf("failed to get playlists: status %d. Body: %s", res.Status(), string(res.Body()))
@@ -113,9 +111,7 @@ func (c *Client) GetPlaylistTracks(playlistID string) ([]Track, error) {
 		
 		res := req.Send()
 		if res.Status() == 429 {
-			pdk.Log(pdk.LogWarn, "Spotify Rate Limit (429) hit. Waiting...")
-			time.Sleep(5 * time.Second)
-			continue
+			return nil, fmt.Errorf("Spotify Rate Limit (429) hit. Please wait a few minutes before trying again.")
 		}
 		if res.Status() != 200 {
 			return nil, fmt.Errorf("failed to get tracks for playlist %s: status %d", playlistID, res.Status())
