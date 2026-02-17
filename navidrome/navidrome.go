@@ -1,7 +1,6 @@
 package navidrome
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -29,9 +28,7 @@ type Track struct {
 // GetUserToken retrieves the Spotify OAuth token for a user from the KVStore.
 func GetUserToken(userID string) (string, error) {
 	// Key format: "spotify_token:<userID>"
-	key := "spotify_token:" + userID
-	mem := pdk.AllocateString(key)
-	defer mem.Free()
+	_ = "spotify_token:" + userID
 	
 	// Assuming `kvstore_get` is the host function
 	// In Extism Go PDK, host functions are called via `HostFunction`
@@ -56,7 +53,7 @@ func GetUserToken(userID string) (string, error) {
 
 // SetUserToken saves the Spotify OAuth token for a user.
 func SetUserToken(userID string, token string) error {
-	key := "spotify_token:" + userID
+	_ = "spotify_token:" + userID
 	// Implementation placeholder
 	return nil
 }
