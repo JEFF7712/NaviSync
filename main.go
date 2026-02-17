@@ -2,7 +2,7 @@ package main
 
 import (
 	"github.com/extism/go-pdk"
-	"github.com/rupan/navidrome-spotify-sync/sync"
+	"github.com/JEFF7712/NaviSync/sync"
 )
 
 //export nd_on_init

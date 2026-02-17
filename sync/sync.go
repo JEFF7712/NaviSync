@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/extism/go-pdk"
-	"github.com/rupan/navidrome-spotify-sync/spotify"
-	"github.com/rupan/navidrome-spotify-sync/navidrome"
+	"github.com/JEFF7712/NaviSync/spotify"
+	"github.com/JEFF7712/NaviSync/navidrome"
 )
 
 // ScheduleSync sets up the recurring synchronization task.
