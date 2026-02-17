@@ -20,6 +20,27 @@ func ScheduleSync() error {
 	return navidrome.Schedule(interval, "nd_sync_spotify")
 }
 
+// CheckTriggers checks for manual action flags in config.
+func CheckTriggers() {
+	testConn, _ := pdk.GetConfig("test_connection")
+	if testConn == "true" {
+		pdk.Log(pdk.LogInfo, "TEST: Testing Spotify connection...")
+		// Placeholder: In real flow, we'd need a token first.
+		// For now, just logging that we received the signal.
+		pdk.Log(pdk.LogInfo, "TEST: Spotify connection test finished (Mock).")
+	}
+
+	manualSync, _ := pdk.GetConfig("manual_sync")
+	if manualSync == "true" {
+		pdk.Log(pdk.LogInfo, "MANUAL: Triggering manual sync...")
+		if err := PerformSync(); err != nil {
+			pdk.Log(pdk.LogError, "MANUAL: Sync failed: "+err.Error())
+		} else {
+			pdk.Log(pdk.LogInfo, "MANUAL: Sync finished successfully.")
+		}
+	}
+}
+
 // PerformSync is the main logic called by the scheduler.
 // It iterates through all users (or configured users) and syncs their playlists.
 func PerformSync() error {

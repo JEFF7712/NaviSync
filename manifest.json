@@ -63,6 +63,18 @@
           "description": "Remove tracks from Navidrome playlist if they are removed from Spotify",
           "type": "boolean",
           "default": false
+        },
+        "test_connection": {
+          "title": "Test Spotify Connection",
+          "description": "Check this box and Save to test the connection. Check logs for result.",
+          "type": "boolean",
+          "default": false
+        },
+        "manual_sync": {
+          "title": "Run Manual Sync",
+          "description": "Check this box and Save to trigger an immediate sync. Check logs for result.",
+          "type": "boolean",
+          "default": false
         }
       },
       "required": ["spotify_client_id", "spotify_client_secret"]

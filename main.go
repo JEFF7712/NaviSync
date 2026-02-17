@@ -20,6 +20,9 @@ func nd_on_init() int32 {
 		return 1
 	}
 
+	// Check for manual triggers on startup/reload
+	sync.CheckTriggers()
+
 	pdk.Log(pdk.LogInfo, "Navidrome Spotify Sync plugin initialized")
 	return 0
 }
