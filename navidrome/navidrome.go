@@ -1,7 +1,6 @@
 package navidrome
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/extism/go-pdk"
