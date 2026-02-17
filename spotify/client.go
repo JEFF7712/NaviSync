@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/extism/go-pdk"
+	"time"
 )
 
 type Client struct {
@@ -70,55 +71,77 @@ type TokenResponse struct {
 	ExpiresIn   int    `json:"expires_in"`
 }
 
-// GetPlaylists fetches the current user's playlists.
+// GetPlaylists fetches the current user's playlists with pagination.
 func (c *Client) GetPlaylists() ([]Playlist, error) {
-	req := pdk.NewHTTPRequest("GET", "https://api.spotify.com/v1/me/playlists")
-	req.SetHeader("Authorization", "Bearer "+c.Token)
-	
-	res := req.Send()
-	if res.Status() != 200 {
-		return nil, fmt.Errorf("failed to get playlists: status %d. Body: %s", res.Status(), string(res.Body()))
+	var allPlaylists []Playlist
+	nextURL := "https://api.spotify.com/v1/me/playlists?limit=50"
+
+	for nextURL != "" {
+		req := pdk.NewHTTPRequest("GET", nextURL)
+		req.SetHeader("Authorization", "Bearer "+c.Token)
+		
+		res := req.Send()
+		if res.Status() == 429 {
+			pdk.Log(pdk.LogWarn, "Spotify Rate Limit (429) hit. Waiting...")
+			time.Sleep(5 * time.Second) // Simple backoff
+			continue
+		}
+		if res.Status() != 200 {
+			return nil, fmt.Errorf("failed to get playlists: status %d. Body: %s", res.Status(), string(res.Body()))
+		}
+		
+		var response PlaylistsResponse
+		if err := json.Unmarshal(res.Body(), &response); err != nil {
+			return nil, err
+		}
+		
+		allPlaylists = append(allPlaylists, response.Items...)
+		nextURL = response.Next
 	}
 	
-	var response PlaylistsResponse
-	if err := json.Unmarshal(res.Body(), &response); err != nil {
-		return nil, err
-	}
-	
-	return response.Items, nil
+	return allPlaylists, nil
 }
 
-// GetPlaylistTracks fetches tracks from a playlist.
+// GetPlaylistTracks fetches tracks from a playlist with pagination.
 func (c *Client) GetPlaylistTracks(playlistID string) ([]Track, error) {
-	url := fmt.Sprintf("https://api.spotify.com/v1/playlists/%s/tracks", playlistID)
-	req := pdk.NewHTTPRequest("GET", url)
-	req.SetHeader("Authorization", "Bearer "+c.Token)
-	
-	res := req.Send()
-	if res.Status() != 200 {
-		return nil, fmt.Errorf("failed to get tracks for playlist %s: status %d", playlistID, res.Status())
-	}
-	
-	var response PlaylistTracksResponse
-	if err := json.Unmarshal(res.Body(), &response); err != nil {
-		return nil, err
-	}
-	
-	var tracks []Track
-	for _, item := range response.Items {
-		track := Track{
-			ID:    item.Track.ID,
-			Title: item.Track.Name,
-			ISRC:  item.Track.ExternalIDs.ISRC,
+	var allTracks []Track
+	nextURL := fmt.Sprintf("https://api.spotify.com/v1/playlists/%s/tracks?limit=100", playlistID)
+
+	for nextURL != "" {
+		req := pdk.NewHTTPRequest("GET", nextURL)
+		req.SetHeader("Authorization", "Bearer "+c.Token)
+		
+		res := req.Send()
+		if res.Status() == 429 {
+			pdk.Log(pdk.LogWarn, "Spotify Rate Limit (429) hit. Waiting...")
+			time.Sleep(5 * time.Second)
+			continue
 		}
-		if len(item.Track.Artists) > 0 {
-			track.Artist = item.Track.Artists[0].Name
+		if res.Status() != 200 {
+			return nil, fmt.Errorf("failed to get tracks for playlist %s: status %d", playlistID, res.Status())
 		}
-		track.Album = item.Track.Album.Name
-		tracks = append(tracks, track)
+		
+		var response PlaylistTracksResponse
+		if err := json.Unmarshal(res.Body(), &response); err != nil {
+			return nil, err
+		}
+		
+		for _, item := range response.Items {
+			track := Track{
+				ID:    item.Track.ID,
+				Title: item.Track.Name,
+				ISRC:  item.Track.ExternalIDs.ISRC,
+			}
+			if len(item.Track.Artists) > 0 {
+				track.Artist = item.Track.Artists[0].Name
+			}
+			track.Album = item.Track.Album.Name
+			allTracks = append(allTracks, track)
+		}
+		nextURL = response.Next
 	}
 	
-	return tracks, nil
+	return allTracks, nil
 }
 
 // RefreshToken refreshes the access token using the refresh token.
@@ -138,6 +161,9 @@ func (c *Client) RefreshToken() (string, error) {
 	req.SetBody([]byte(body))
 	
 	res := req.Send()
+	if res.Status() == 429 {
+		return "", fmt.Errorf("Spotify Rate Limit (429) on token refresh. Please wait.")
+	}
 	if res.Status() != 200 {
 		return "", fmt.Errorf("failed to refresh token: status %d. Body: %s", res.Status(), string(res.Body()))
 	}
