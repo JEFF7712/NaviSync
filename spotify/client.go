@@ -75,7 +75,7 @@ func (c *Client) GetPlaylists() ([]Playlist, error) {
 	nextURL := "https://api.spotify.com/v1/me/playlists?limit=50"
 
 	for nextURL != "" {
-		req := pdk.NewHTTPRequest("GET", nextURL)
+		req := pdk.NewHTTPRequest(pdk.MethodGet, nextURL)
 		req.SetHeader("Authorization", "Bearer "+c.AccessToken)
 
 		res := req.Send()
@@ -104,7 +104,7 @@ func (c *Client) GetPlaylistTracks(playlistID string) ([]Track, error) {
 	nextURL := fmt.Sprintf("https://api.spotify.com/v1/playlists/%s/tracks?limit=100", playlistID)
 
 	for nextURL != "" {
-		req := pdk.NewHTTPRequest("GET", nextURL)
+		req := pdk.NewHTTPRequest(pdk.MethodGet, nextURL)
 		req.SetHeader("Authorization", "Bearer "+c.AccessToken)
 
 		res := req.Send()
@@ -147,7 +147,7 @@ func (c *Client) RefreshToken() (string, error) {
 	}
 
 	tokenURL := "https://accounts.spotify.com/api/token"
-	req := pdk.NewHTTPRequest("POST", tokenURL)
+	req := pdk.NewHTTPRequest(pdk.MethodPost, tokenURL)
 
 	auth := base64.StdEncoding.EncodeToString([]byte(c.ClientID + ":" + c.ClientSecret))
 	req.SetHeader("Authorization", "Basic "+auth)
