@@ -27,9 +27,13 @@ jobs:
       
       - name: Download dependencies
         run: go mod tidy && go mod download
-      
+        env:
+          GOTOOLCHAIN: local
+
       - name: Build plugin
         run: make build
+        env:
+          GOTOOLCHAIN: local
       
       - name: Create Release
         uses: softprops/action-gh-release@v1
