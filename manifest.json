@@ -12,7 +12,8 @@
       "reason": "To schedule periodic syncs"
     },
     "kvstore": {
-      "reason": "To store Spotify tokens"
+      "reason": "To store Spotify tokens",
+      "maxSize": "1MB"
     },
     "subsonicapi": {
       "reason": "To manage playlists"
@@ -131,8 +132,5 @@
         }
       ]
     }
-  },
-  "interfaces": {
-    "wasi": "0.1"
   }
 }

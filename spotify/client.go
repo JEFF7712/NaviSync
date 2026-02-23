@@ -4,25 +4,23 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+
 	"github.com/extism/go-pdk"
 )
 
 type Client struct {
-	Token        string
+	RefreshTok   string
+	AccessToken  string
 	ClientID     string
 	ClientSecret string
 }
 
-func NewClient(token, clientID, clientSecret string) *Client {
+func NewClient(refreshToken, clientID, clientSecret string) *Client {
 	return &Client{
-		Token:        token,
+		RefreshTok:   refreshToken,
 		ClientID:     clientID,
 		ClientSecret: clientSecret,
 	}
-}
-
-func (c *Client) SetToken(token string) {
-	c.Token = token
 }
 
 // Simplified structs for Spotify API response
@@ -65,9 +63,10 @@ type PlaylistTracksResponse struct {
 }
 
 type TokenResponse struct {
-	AccessToken string `json:"access_token"`
-	TokenType   string `json:"token_type"`
-	ExpiresIn   int    `json:"expires_in"`
+	AccessToken  string `json:"access_token"`
+	TokenType    string `json:"token_type"`
+	ExpiresIn    int    `json:"expires_in"`
+	RefreshToken string `json:"refresh_token"`
 }
 
 // GetPlaylists fetches the current user's playlists with pagination.
@@ -77,25 +76,25 @@ func (c *Client) GetPlaylists() ([]Playlist, error) {
 
 	for nextURL != "" {
 		req := pdk.NewHTTPRequest("GET", nextURL)
-		req.SetHeader("Authorization", "Bearer "+c.Token)
-		
+		req.SetHeader("Authorization", "Bearer "+c.AccessToken)
+
 		res := req.Send()
 		if res.Status() == 429 {
-			return nil, fmt.Errorf("Spotify Rate Limit (429) hit. Please wait a few minutes before trying again.")
+			return nil, fmt.Errorf("spotify rate limit (429) hit, please wait before trying again")
 		}
 		if res.Status() != 200 {
-			return nil, fmt.Errorf("failed to get playlists: status %d. Body: %s", res.Status(), string(res.Body()))
+			return nil, fmt.Errorf("failed to get playlists: status %d, body: %s", res.Status(), string(res.Body()))
 		}
-		
+
 		var response PlaylistsResponse
 		if err := json.Unmarshal(res.Body(), &response); err != nil {
 			return nil, err
 		}
-		
+
 		allPlaylists = append(allPlaylists, response.Items...)
 		nextURL = response.Next
 	}
-	
+
 	return allPlaylists, nil
 }
 
@@ -106,21 +105,21 @@ func (c *Client) GetPlaylistTracks(playlistID string) ([]Track, error) {
 
 	for nextURL != "" {
 		req := pdk.NewHTTPRequest("GET", nextURL)
-		req.SetHeader("Authorization", "Bearer "+c.Token)
-		
+		req.SetHeader("Authorization", "Bearer "+c.AccessToken)
+
 		res := req.Send()
 		if res.Status() == 429 {
-			return nil, fmt.Errorf("Spotify Rate Limit (429) hit. Please wait a few minutes before trying again.")
+			return nil, fmt.Errorf("spotify rate limit (429) hit, please wait before trying again")
 		}
 		if res.Status() != 200 {
 			return nil, fmt.Errorf("failed to get tracks for playlist %s: status %d", playlistID, res.Status())
 		}
-		
+
 		var response PlaylistTracksResponse
 		if err := json.Unmarshal(res.Body(), &response); err != nil {
 			return nil, err
 		}
-		
+
 		for _, item := range response.Items {
 			track := Track{
 				ID:    item.Track.ID,
@@ -135,38 +134,42 @@ func (c *Client) GetPlaylistTracks(playlistID string) ([]Track, error) {
 		}
 		nextURL = response.Next
 	}
-	
+
 	return allTracks, nil
 }
 
-// RefreshToken refreshes the access token using the refresh token.
+// RefreshToken exchanges the refresh token for a new access token.
+// Stores the access token internally. Returns a new refresh token if
+// Spotify provides one (for token rotation), or empty string otherwise.
 func (c *Client) RefreshToken() (string, error) {
 	if c.ClientID == "" || c.ClientSecret == "" {
 		return "", fmt.Errorf("spotify_client_id or spotify_client_secret not configured")
 	}
 
-	url := "https://accounts.spotify.com/api/token"
-	req := pdk.NewHTTPRequest("POST", url)
-	
+	tokenURL := "https://accounts.spotify.com/api/token"
+	req := pdk.NewHTTPRequest("POST", tokenURL)
+
 	auth := base64.StdEncoding.EncodeToString([]byte(c.ClientID + ":" + c.ClientSecret))
 	req.SetHeader("Authorization", "Basic "+auth)
 	req.SetHeader("Content-Type", "application/x-www-form-urlencoded")
-	
-	body := fmt.Sprintf("grant_type=refresh_token&refresh_token=%s", c.Token)
+
+	body := fmt.Sprintf("grant_type=refresh_token&refresh_token=%s", c.RefreshTok)
 	req.SetBody([]byte(body))
-	
+
 	res := req.Send()
 	if res.Status() == 429 {
-		return "", fmt.Errorf("Spotify Rate Limit (429) on token refresh. Please wait.")
+		return "", fmt.Errorf("spotify rate limit (429) on token refresh, please wait")
 	}
 	if res.Status() != 200 {
-		return "", fmt.Errorf("failed to refresh token: status %d. Body: %s", res.Status(), string(res.Body()))
+		return "", fmt.Errorf("failed to refresh token: status %d, body: %s", res.Status(), string(res.Body()))
 	}
-	
+
 	var response TokenResponse
 	if err := json.Unmarshal(res.Body(), &response); err != nil {
 		return "", err
 	}
-	
-	return response.AccessToken, nil
+
+	c.AccessToken = response.AccessToken
+
+	return response.RefreshToken, nil
 }

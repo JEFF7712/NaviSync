@@ -2,75 +2,113 @@
 
 Sync your Spotify playlists to Navidrome automatically.
 
+NaviSync is a native Navidrome plugin that periodically fetches your Spotify playlists and recreates them in Navidrome by matching tracks against your local library.
+
 ## Quick Start
 
 ### 1. Install Plugin
 
 1. Download `navisync.ndp` from [Releases](https://github.com/JEFF7712/NaviSync/releases)
-2. Copy it to your Navidrome plugins folder
-3. Add to `navidrome.toml`:
+2. Copy it to your Navidrome plugins directory
+3. Enable plugins in `navidrome.toml`:
    ```toml
    [Plugins]
    Enabled = true
    ```
 4. Restart Navidrome
+5. In Navidrome UI, go to **Settings > Plugins** and assign users to NaviSync
 
-### 2. Configure Spotify App
+### 2. Create a Spotify App
 
 1. Go to [Spotify Developer Dashboard](https://developer.spotify.com/dashboard/)
 2. Create a new app
-3. Add redirect URI: `http://localhost:8888/callback` (for local OAuth flow)
+3. Add redirect URI: `http://localhost:8888/callback` (for the token helper script)
 4. Save your **Client ID** and **Client Secret**
 
-### 3. Configure Plugin
+### 3. Get a Refresh Token
 
-In Navidrome UI → **Settings > Plugins > NaviSync**:
+Use the included helper script to obtain a Spotify refresh token:
+
+```bash
+node scripts/get_token.js <CLIENT_ID> <CLIENT_SECRET>
+```
+
+Follow the browser prompt to authorize, then copy the refresh token.
+
+### 4. Configure Plugin
+
+In Navidrome UI, go to **Settings > Plugins > NaviSync**:
 
 - **Spotify Client ID**: Your app's Client ID
-- **Spotify Client Secret**: Your app's Client Secret  
-- **Spotify Redirect URI**: `http://localhost:8888/callback`
-- **Sync Interval**: `0 */6 * * *` (every 6 hours, or customize)
-- **Playlists Filter**: Leave empty to sync all, or comma-separated names
-
-### 4. Authenticate
-
-The first sync will prompt you to authorize via Spotify OAuth. Follow the browser prompt to grant access.
+- **Spotify Client Secret**: Your app's Client Secret
+- **Spotify Refresh Token**: The token from step 3
+- **Sync Interval**: Cron expression (default: `0 */6 * * *` = every 6 hours)
+- **Playlists Filter**: Leave empty to sync all, or comma-separated playlist names
 
 ## How It Works
 
-- **Scheduled sync** runs on your configured interval (default: every 6 hours)
-- **Smart matching**: Tracks matched by ISRC codes, with fuzzy fallback for artist/title
-- **Persistent tokens**: OAuth tokens stored securely in Navidrome's KVStore
-- **Per-user**: Each Navidrome user can connect their own Spotify account
+1. On each scheduled sync, NaviSync fetches all users assigned to the plugin
+2. For each user, it retrieves their Spotify refresh token from Navidrome's KVStore (falling back to the global config)
+3. It authenticates with Spotify and fetches the user's playlists
+4. For each playlist (optionally filtered), it searches Navidrome's library via the Subsonic API to match tracks by artist and title
+5. Matched tracks are assembled into a Navidrome playlist (created or updated)
 
 ## Features
 
-✅ OAuth 2.0 authentication  
-✅ Automatic token refresh  
-✅ ISRC-based track matching  
-✅ Configurable sync intervals  
-✅ Filter specific playlists  
-✅ Per-user configuration  
+- Automatic scheduled sync via Navidrome's scheduler
+- Per-user Spotify tokens stored in Navidrome's KVStore
+- Track matching: exact case-insensitive match, with fuzzy contains-based fallback
+- Playlist filtering by name
+- Automatic Spotify token refresh with rotation support
+- Manual sync and connection test triggers via plugin settings
 
 ## Troubleshooting
 
-**Plugin won't enable?**
-- Check Navidrome logs: `Plugins.LogLevel = "debug"` in config
-- Verify all users are assigned to the plugin in Settings
+**Plugin won't load?**
+- Ensure you're running Navidrome with plugin support enabled
+- Check logs: set `Plugins.LogLevel = "debug"` in your Navidrome config
+- Verify the `.ndp` file is in the plugins directory
+
+**No users found?**
+- Users must be explicitly assigned to the plugin in **Settings > Plugins > NaviSync**
 
 **Tracks not matching?**
-- Ensure your Navidrome library has accurate metadata (use MusicBrainz Picard)
-- Check logs for unmatched tracks
+- NaviSync matches by artist name and track title against your Navidrome library
+- Ensure your library has accurate metadata (tools like MusicBrainz Picard help)
+- Check debug logs for "Unmatched" entries to see which tracks couldn't be found
 
-**OAuth fails?**
-- Verify redirect URI matches exactly in Spotify app settings
-- Ensure `http://localhost:8888/callback` is accessible from where you run the OAuth flow
+**Token errors?**
+- Verify your Spotify Client ID and Client Secret are correct
+- Re-run the token helper script to get a fresh refresh token
+- Check that `api.spotify.com` and `accounts.spotify.com` are allowed in the plugin's HTTP permissions
 
 ## Development
 
-Build from source:
+### Requirements
+
+- Go 1.23+
+- TinyGo 0.34+
+
+### Build
+
 ```bash
-make build  # Requires TinyGo 0.30+
+# Quick build
+make build
+
+# Or use the helper script
+./build.sh
+```
+
+This produces `navisync.ndp` (a zip containing `manifest.json` + `plugin.wasm`).
+
+### Project Structure
+
+```
+main.go              - Plugin registration (lifecycle + scheduler)
+sync/sync.go         - Sync orchestration (OnInit, OnCallback, PerformSync)
+navidrome/navidrome.go - Navidrome host function wrappers (Subsonic API, KVStore, Users)
+spotify/client.go    - Spotify API client (playlists, tracks, token refresh)
+manifest.json        - Plugin manifest with permissions and config schema
 ```
 
 ## License
