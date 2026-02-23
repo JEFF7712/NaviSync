@@ -6,7 +6,7 @@ ARCHIVE := navisync.ndp
 all: build
 
 build:
-	tinygo build -o $(TARGET) -target wasip1 .
+	tinygo build -opt=2 -scheduler=none -no-debug -gc=leaking -o $(TARGET) -target wasip1 -buildmode=c-shared .
 	zip -j $(ARCHIVE) manifest.json $(TARGET)
 
 clean:
