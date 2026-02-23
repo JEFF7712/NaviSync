@@ -1,6 +1,6 @@
 module github.com/JEFF7712/NaviSync
 
-go 1.23
+go 1.25
 
 require (
 	github.com/extism/go-pdk v1.1.3

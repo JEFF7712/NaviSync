@@ -86,8 +86,8 @@ In Navidrome UI, go to **Settings > Plugins > NaviSync**:
 
 ### Requirements
 
-- Go 1.23+
-- TinyGo 0.34+
+- Go 1.25+
+- TinyGo 0.40+
 
 ### Build
 

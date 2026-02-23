@@ -14,27 +14,23 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.23'
-      
+          go-version: '1.25'
+
       - name: Install TinyGo
         run: |
-          wget https://github.com/tinygo-org/tinygo/releases/download/v0.35.0/tinygo_0.35.0_amd64.deb
-          sudo dpkg -i tinygo_0.35.0_amd64.deb
-      
+          wget https://github.com/tinygo-org/tinygo/releases/download/v0.40.1/tinygo_0.40.1_amd64.deb
+          sudo dpkg -i tinygo_0.40.1_amd64.deb
+
       - name: Download dependencies
         run: go mod tidy && go mod download
-        env:
-          GOTOOLCHAIN: local
 
       - name: Build plugin
         run: make build
-        env:
-          GOTOOLCHAIN: local
-      
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
