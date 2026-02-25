@@ -103,7 +103,7 @@ const server = https.createServer({ key: cert.key, cert: cert.cert }, async (req
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=playlist-read-private`;
+  const authUrl = `https://accounts.spotify.com/authorize?client_id=${CLIENT_ID}&response_type=code&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&scope=playlist-read-private%20playlist-read-collaborative`;
   console.log('1. Add this redirect URI to your Spotify app settings:');
   console.log(`   ${REDIRECT_URI}\n`);
   console.log('2. Open this URL in your browser:');

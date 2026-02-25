@@ -112,7 +112,7 @@ func (c *Client) GetPlaylistTracks(playlistID string) ([]Track, error) {
 			return nil, fmt.Errorf("spotify rate limit (429) hit, please wait before trying again")
 		}
 		if res.Status() != 200 {
-			return nil, fmt.Errorf("failed to get tracks for playlist %s: status %d", playlistID, res.Status())
+			return nil, fmt.Errorf("failed to get tracks for playlist %s: status %d, body: %s", playlistID, res.Status(), string(res.Body()))
 		}
 
 		var response PlaylistTracksResponse
